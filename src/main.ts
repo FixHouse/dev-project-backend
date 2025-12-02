@@ -7,11 +7,17 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,   // прибирає зайві поля з body
-      transform: true,   // приводить типи (id з string -> number)
+      whitelist: true,
+      transform: true,
     }),
   );
 
-  await app.listen(3000);
+  //  дозволяємо запити з інших девайсів/доменів
+  app.enableCors();
+
+  const port = process.env.PORT || 3000;
+
+  //  дуже важливо: '0.0.0.0', щоб був доступ із телефона
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();

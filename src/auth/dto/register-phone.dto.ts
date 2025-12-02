@@ -1,8 +1,8 @@
 import { IsString, MinLength } from 'class-validator';
 
-export class LoginDto {
+export class RegisterPhoneDto {
   @IsString()
-  identifier: string; // email або телефон у форматі +380...
+  phone: string; // очікуємо +380... (E.164)
 
   @IsString()
   @MinLength(6)

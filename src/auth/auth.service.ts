@@ -1,11 +1,15 @@
 import {
   Injectable,
+  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
 import { UsersService } from 'src/users/users.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterPhoneDto } from './dto/register-phone.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,27 +18,32 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  // Опційно, щоб використовувати в інших місцях
-  async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return null;
-
-    // Забираємо пароль перед поверненням
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _password, ...rest } = user;
-    return rest;
-  }
-
+  // ЛОГІН: email АБО телефон
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const { identifier, password } = dto;
+
+    let user;
+
+    if (identifier.includes('@')) {
+      // логін по email
+      user = await this.usersService.findByEmail(identifier);
+    } else {
+      // логін по телефону
+      const phoneNumber = parsePhoneNumberFromString(identifier);
+
+      if (!phoneNumber || !phoneNumber.isValid()) {
+        throw new BadRequestException('Invalid phone number');
+      }
+
+      const e164 = phoneNumber.number; // +380...
+      user = await this.usersService.findByPhone(e164);
+    }
+
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -42,16 +51,59 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role, // READER / AUTHOR
+      phone: user.phone,
+      role: user.role,
     };
 
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    const { password: _pwd, ...safeUser } = user;
+
     return {
-      accessToken: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
+      accessToken,
+      user: safeUser,
+    };
+  }
+
+  // РЕЄСТРАЦІЯ ПО ТЕЛЕФОНУ
+  async registerByPhone(dto: RegisterPhoneDto) {
+    const phoneNumber = parsePhoneNumberFromString(dto.phone);
+
+    if (!phoneNumber || !phoneNumber.isValid()) {
+      throw new BadRequestException('Invalid phone number');
+    }
+
+    const e164 = phoneNumber.number; // +380...
+    const country = phoneNumber.country; // UA, US, etc.
+
+    const existing = await this.usersService.findByPhone(e164);
+    if (existing) {
+      throw new BadRequestException('Phone already registered');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.usersService.createByPhone(
+      e164,
+      hashedPassword,
+      country,
+    );
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    const { password: _pwd, ...safeUser } = user;
+
+    return {
+      accessToken,
+      user: safeUser,
     };
   }
 }
+
