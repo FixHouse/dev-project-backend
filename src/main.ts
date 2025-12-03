@@ -3,6 +3,9 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
+  // 👇 ДІАГНОСТИКА
+  console.log('DATABASE_URL from process.env =', process.env.DATABASE_URL);
+
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
@@ -12,12 +15,9 @@ async function bootstrap() {
     }),
   );
 
-  //  дозволяємо запити з інших девайсів/доменів
   app.enableCors();
 
   const port = process.env.PORT || 3000;
-
-  //  дуже важливо: '0.0.0.0', щоб був доступ із телефона
   await app.listen(port, '0.0.0.0');
 }
 bootstrap();

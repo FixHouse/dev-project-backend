@@ -13,25 +13,26 @@ enum Role {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String?  @unique
+  id           Int             @id @default(autoincrement())
+  email        String?         @unique
   password     String
-  role         Role     @default(READER)
-  phone        String?  @unique
+  role         Role            @default(READER)
+  phone        String?         @unique
   phoneCountry String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   // профільні поля
-  name       String?
-  avatarUrl  String?
-  city       String?
-  bio        String?
-  website    String?
-  instagram  String?
-  telegram   String?
+  name        String?
+  avatarUrl   String?
+  city        String?
+  bio         String?
+  website     String?
+  instagram   String?
+  telegram    String?
 
-  projects   Project[]   // ← ВАЖЛИВО
+  projects    Project[]
+  sessions    DeviceSession[]   
 }
 
 enum ProjectStatus {
@@ -41,17 +42,37 @@ enum ProjectStatus {
 
 model Project {
   id          Int           @id @default(autoincrement())
-  title       String
+  title       String?
   description String?
   coverUrl    String?
   status      ProjectStatus @default(DRAFT)
 
-  authorId Int
-  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId    Int
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
+//  нова модель для сесій/refresh токенів
+model DeviceSession {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceId         String
+  ip               String?
+  userAgent        String?
+
+  refreshTokenHash String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  @@index([userId])
+  @@index([deviceId])
+}
+
 
 
 

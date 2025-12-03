@@ -1,10 +1,14 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class RegisterPhoneDto {
   @IsString()
-  phone: string; // очікуємо +380... (E.164)
+  phone: string;
 
   @IsString()
   @MinLength(6)
   password: string;
+
+  @IsString()
+  @IsOptional()
+  phoneCountry?: string; // 👈 ось це поле додай
 }

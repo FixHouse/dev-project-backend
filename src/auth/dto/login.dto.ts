@@ -1,10 +1,15 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class LoginDto {
   @IsString()
-  identifier: string; // email або телефон у форматі +380...
+  @IsNotEmpty()
+  identifier: string; // email або телефон
 
   @IsString()
-  @MinLength(6)
+  @IsNotEmpty()
   password: string;
+
+  @IsString()
+  @IsOptional()
+  deviceId?: string;
 }
